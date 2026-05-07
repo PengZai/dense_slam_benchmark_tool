@@ -1,7 +1,7 @@
 system:
   use_data_source: 0
   start_idx: 40
-  end_idx: 45
+  end_idx: 103
   maximum_depth_for_depthimage: 1000
   minimum_depth_for_depthimage: 0.001
   maximum_z_for_pointcloud: 1000 # lidar reliable distance is 100 meter maximum
@@ -11,14 +11,14 @@ system:
 
 output:
   isOutput: true
-  path: /mnt/lboro_nas/personal/Zhipeng/wai_data/tartan_air/gascola_sample_P001
+  path: /mnt/lboro_nas/personal/Zhipeng/wai_data/tartan_air/gascola_sample_P001_64
   isSaveVisualizationDepthImage: true
   maximum_depth_for_vis_depthimage: -1
   minimum_depth_for_vis_depthimage: -1
 
 
 visualization:
-  isVisualization: true
+  isVisualization: false
 
 
 
@@ -58,9 +58,23 @@ sensor3ds:
     distortion_coeffs: [0,0,0,0] #k1,k2,p1,p2
     xyz_scale_factor: [1.0, 1.0, 1.0]
     down_sample_rate: 1.0
-
+  
   sensor3d1:
     id: 1
+    sensor3dtype: imagedepth
+    camera_id: 0
+    name: GT_depth_left_downsampled_40_percent
+    sensor3dpath: /media/spiderman/zhipeng_8t1/datasets/tartan_air/gascola_sample_P001/P001/depth_left
+    camera_model: pinhole
+    resolution: [640, 480] # width x height
+    intrinsics: [320, 320, 320, 240] #fx, fy, cu, cv
+    distortion_model: radtan
+    distortion_coeffs: [0,0,0,0] #k1,k2,p1,p2
+    xyz_scale_factor: [1.0, 1.0, 1.0]
+    down_sample_rate: 0.4
+
+  sensor3d2:
+    id: 2
     sensor3dtype: imagedepth
     camera_id: 1
     name: GT_depth_right
@@ -73,13 +87,28 @@ sensor3ds:
     xyz_scale_factor: [1.0, 1.0, 1.0]
     down_sample_rate: 1.0
 
+  sensor3d3:
+    id: 3
+    sensor3dtype: imagedepth
+    camera_id: 1
+    name: GT_depth_right_downsampled_40_percent
+    sensor3dpath: /media/spiderman/zhipeng_8t1/datasets/tartan_air/gascola_sample_P001/P001/depth_right
+    camera_model: pinhole
+    resolution: [640, 480] # width x height
+    intrinsics: [320, 320, 320, 240] #fx, fy, cu, cv
+    distortion_model: radtan
+    distortion_coeffs: [0,0,0,0] #k1,k2,p1,p2
+    xyz_scale_factor: [1.0, 1.0, 1.0]
+    down_sample_rate: 0.4
+
+
 data_source0:
   trajectoryname: gt_trajectory
   trajectorytype: poses_for_single_sensor
   trajectory_path: /media/spiderman/zhipeng_8t1/datasets/tartan_air/gascola_sample_P001/P001/pose_left.txt 
   imagepath: /media/spiderman/zhipeng_8t1/datasets/tartan_air/gascola_sample_P001/P001/image_left
-  used_sensor3d_idxes: [0, 1]
-  num_cumulation: [0, 0] # if there are two used sensor3ds, you need to specify two numbers of cumulation.
+  used_sensor3d_idxes: [1]
+  num_cumulation: [0] # if there are two used sensor3ds, you need to specify two numbers of cumulation.
   T_pose_used_sensor3d_idx0:
     - [0,0,1,0]
     - [1,0,0,0]
@@ -90,7 +119,7 @@ data_source0:
     - [1.0,   0,   0., 0.25]
     - [0, 1.0,   0,   0] 
     - [0,   0,   0,   1.0]
-  used_camera_idxes: [0, 1]
+  used_camera_idxes: [0]
   T_pose_used_cam_idx0:
     - [0,0,1,0]
     - [1,0,0,0]

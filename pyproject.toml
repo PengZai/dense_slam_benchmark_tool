@@ -14,11 +14,12 @@ readme = "README.md"
 requires-python = ">=3.10.0"
 
 dependencies = [
-    "moderngl_window",
+    "moderngl_window<3",
     "open3d",
     "opencv-python",
     "pytransform3d",
     "trimesh",
+    "pyglet<2",
     "pycolmap",
     "hydra-core",
     "torch==2.10.0",
@@ -33,6 +34,8 @@ mapanything = ["mapanything @ git+https://github.com/facebookresearch/map-anythi
 depth-anything-V2 = ["depth-anything-v2 @ git+https://github.com/PengZai/Depth-Anything-V2.git"]
 depth-anything-V3 = ["depth-anything-3 @ git+https://github.com/PengZai/Depth-Anything-3.git@main#egg=depth-anything-3"]
 vggt = ["vggt @ git+https://github.com/PengZai/vggt.git"]
+foundation-stereo = ["FoundationStereo @ git+https://github.com/PengZai/FoundationStereo.git"]
+moge = ["moge @ git+https://github.com/PengZai/MoGe.git"]
 
 hloc = [
   "hloc[all-examples] @ git+https://github.com/PengZai/Hierarchical-Localization.git",

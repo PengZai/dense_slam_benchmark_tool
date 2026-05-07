@@ -64,11 +64,12 @@ class PriorDepthAnythingWrapper(torch.nn.Module):
             res.append({
                 'pred_depth': output,
                 'pred_depth_mask': output > 0,
+                'pred_depth_confidence': (output > 0).astype("float32"),
                 'pred_T_w_c': view['T_w_c'].cpu().numpy(),
+                'pred_intrinsics': view['intrinsics'].cpu().numpy(),
                 'runtime':runtime,
             })
 
         
 
         return res
-

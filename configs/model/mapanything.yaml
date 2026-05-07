@@ -2,18 +2,31 @@ defaults:
   - encoder: dinov2_giant_24_layers
   - info_sharing: aat_ifr_16_layers_vitg_dim
   - pred_head: dpt_pose_scale
+  # Geometric-input task. Pick the task whose probabilities (ray_dirs_prob /
+  # cam_prob / depth_prob / sparse_depth_prob) match what you want to feed in:
+  #   - images_only           : RGB only (all probs = 0)
+  #   - posed_sfm             : intrinsics + poses (no depth)
+  #   - pass_through          : intrinsics + poses + DENSE depth (metric)   <-- use this for I+P+D
+  #   - non_metric_poses_metric_depth        : same as pass_through but pose scale-norm dropped
+  #   - non_metric_poses_metric_depth_sparse : intrinsics + poses + SPARSE depth
+  #   - depth_completion      : intrinsics + (sparse) depth, no poses
+  - task: images_only
 
 # String for model factory
 model_str: "mapanything"
 # Model config
 model_config:
   name: "mapanything"
-  isInputIntrinsics: true
-  isInputCameraPoses: true
-  isInputDepthZ: false
+  # Per-modality input switches. These must agree with the `task` chosen above:
+  # turning a flag on here without the matching prob>0 in the task (or vice versa)
+  # will either feed zeros to the model or silently drop your input.
+  isInputIntrinsics: true   # requires task.ray_dirs_prob > 0
+  isInputCameraPoses: false  # requires task.cam_prob       > 0
+  isInputDepthZ: false       # requires task.depth_prob     > 0  (set true to feed depth)
   encoder_config: ${model.encoder}
   info_sharing_config: ${model.info_sharing}
   pred_head_config: ${model.pred_head}
+  geometric_input_config: ${model.task}
   use_register_tokens_from_encoder: True
   info_sharing_mlp_layer_str: "swiglufused"
   pretrained_checkpoint_path: "${root_pretrained_checkpoints_dir}/facebook_map-anything.pth"
@@ -22,7 +35,12 @@ data_norm_type: ${model.encoder.data_norm_type}
 # test resolution
 test_resolution: [518, 336]
 postprocessing:
-  isAffineRefineDepthWithInputDepth: false
+  similarity_refine_mode: "sub_scene" # "depth" uses affine depth refinement; "sub_scene" uses similarity refinement
+  isAlignWithGT: true
   isConsistencyCheck: true
   isJustCompareNearDistance: false
   maximum_near_distance: 10 # unit metter
+  sub_scene:
+    isAlignSubScenesSequential: true # whether to align sub scenes sequentially
+    gt_align_method: "depth_pixel_sim3" # GT alignment: "pointcloud_icp" (Open3D ICP vs GT_pointcloud) or "depth_pixel_sim3" (weighted Sim(3) Umeyama on per-pixel pred-vs-GT_depth correspondences)
+    similarity_refine_use_pose_init: true # use all pred/GT pose pairs to initialize sub_scene similarity alignment

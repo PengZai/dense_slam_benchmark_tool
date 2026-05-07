@@ -4,3 +4,15 @@
 [submodule "thirdparty/DetectorFreeSfM"]
 	path = thirdparty/DetectorFreeSfM
 	url = git@github.com:PengZai/DetectorFreeSfM.git
+[submodule "thirdparty/VGGT-Long"]
+	path = thirdparty/VGGT-Long
+	url = git@github.com:PengZai/VGGT-Long.git
+[submodule "thirdparty/FoundationStereo"]
+	path = thirdparty/FoundationStereo
+	url = git@github.com:PengZai/FoundationStereo.git
+[submodule "thirdparty/Hierarchical-Localization"]
+	path = thirdparty/Hierarchical-Localization
+	url = git@github.com:PengZai/Hierarchical-Localization.git
+[submodule "thirdparty/MoGe"]
+	path = thirdparty/MoGe
+	url = git@github.com:PengZai/MoGe.git

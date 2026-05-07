@@ -6,6 +6,33 @@ model_config:
   # Checkpoint path
   ckpt_dir: "${root_pretrained_checkpoints_dir}"
   encoder: "vitb" # vits vitb vitl vitg
+
+  # If true, load the metric-depth fine-tuned variant instead of the relative
+  # release. Output is depth in METERS (the wrapper skips the inverse-depth
+  # conversion). Checkpoint name pattern picked up from `ckpt_dir`:
+  #   metric=false  ->  depth_anything_v2_{encoder}.pth
+  #   metric=true   ->  depth_anything_v2_metric_{metric_dataset}_{encoder}.pth
+  # Source: https://github.com/DepthAnything/Depth-Anything-V2/tree/main/metric_depth
+  # NOTE: when flipping this to true, also set
+  #   postprocessing.isAlignWithGT: false
+  #   postprocessing.similarity_refine_mode: "sub_scene"
+  # below — the metric model already outputs absolute meters, so the affine
+  # depth-refinement step ("depth" mode) is no longer needed.
+  metric: false
+
+  # Domain of the fine-tuned metric checkpoint:
+  #   "hypersim" : indoor scenes; default max_depth = 20 m
+  #   "vkitti"   : outdoor scenes; default max_depth = 80 m
+  # Only consulted when metric=true.
+  metric_dataset: "hypersim"
+
+  # Optional override for the depth head's saturation cap, in meters. Leave
+  # null to use the dataset default (20 for hypersim, 80 for vkitti). Setting
+  # this to a value far from the released training range will silently produce
+  # poor depth — keep it close to the dataset default unless you have a reason.
+  # Only consulted when metric=true.
+  max_depth: null
+
 # Image Normalization Type
 data_norm_type: "dinov2"
 # Torch hub force reload
@@ -13,7 +40,12 @@ torch_hub_force_reload: false
 # test resolution
 test_resolution: [518, 336]
 postprocessing:
-  isAffineRefineDepthWithInputDepth: true
-  isConsistencyCheck: false
+  isAlignWithGT: true
+  similarity_refine_mode: "depth" # "depth" uses affine depth refinement; "sub_scene" uses similarity refinement
+  isConsistencyCheck: true
   isJustCompareNearDistance: false
   maximum_near_distance: 10 # unit metter
+  sub_scene:
+    isAlignSubScenesSequential: true # whether to align sub scenes sequentially
+    gt_align_method: "pointcloud_icp" # GT alignment: "pointcloud_icp" (Open3D ICP vs GT_pointcloud) or "depth_pixel_sim3" (weighted Sim(3) Umeyama on per-pixel pred-vs-GT_depth correspondences)
+    similarity_refine_use_pose_init: true # use all pred/GT pose pairs to initialize sub_scene similarity alignment

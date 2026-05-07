@@ -17,7 +17,7 @@ from dense_slam_benchmark.dataset_tools import utils
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--configdir", default="configs/dataset_tools/ETH3d/multi_view_training/terrains.yaml", type=str, help="path to configure directory")
+    parser.add_argument("--configdir", default="configs/dataset_tools/BotanicGarden.yaml", type=str, help="path to configure directory")
     args = parser.parse_args()
 
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
             points_c = synchronized_p_c
             points_c_h = np.hstack([points_c, np.ones((points_c.shape[0], 1), dtype=np.float32)])  # (N,4)
             T_reference_camera_at_first_sample_cam_idx = (
-                utils.invert_transform(T_w_reference_camera_at_first_sample) @ T_w_cam_idx
+                np.linalg.inv(T_w_reference_camera_at_first_sample) @ T_w_cam_idx
             )
             points_in_reference_frame_h = (T_reference_camera_at_first_sample_cam_idx @ points_c_h.T).T
             colors = synchronized_image_data['cumulated_p_c_color']
@@ -117,7 +117,7 @@ if __name__ == '__main__':
         pose_output_path = os.path.join(
             configs['output']['path'],
             camera_data.config['name'],
-            f"{data_source['trajectoryname']}_T_{reference_camera_name}_first_sample_from_cam{camera_data.id}.txt",
+            f"aligned_{data_source['trajectoryname']}_pose.txt",
         )
         with open(pose_output_path, "w", encoding="utf-8") as f:
             f.write("#timestamp/index x y z q_x q_y q_z q_w\n")

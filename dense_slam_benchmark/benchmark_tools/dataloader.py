@@ -98,7 +98,7 @@ class Testdataset(torch.utils.data.Dataset):
         self.is_metric_scale = config['dataset_test']['is_metric_scale']
 
         self.resolution = config['model']['test_resolution']
-        self.camera_datasets = []
+        self.camera_dataset_by_id = {}
         self.sample_indexes_per_views_list = []
         self.depth_transform = torchvision.transforms.Compose(
                 [
@@ -127,7 +127,8 @@ class Testdataset(torch.utils.data.Dataset):
             )
 
         for camera_config in config['cameras']:
-            self.camera_datasets.append(CameraDataset(config['cameras'][camera_config]))
+            camera_dataset = CameraDataset(config['cameras'][camera_config])
+            self.camera_dataset_by_id[camera_dataset.config['id']] = camera_dataset
 
 
         self.makeSampleIndexPerViewsInSequential()
@@ -135,41 +136,38 @@ class Testdataset(torch.utils.data.Dataset):
     
 
     @staticmethod
-    def get_views(views, start_index, require_num_view, wrap=False):
-
+    def get_views(views, start_index, require_num_view):
         n = len(views)
-        indexes_views = list(range(n))
-    
         if n == 0:
             return []
-        
-        if not wrap:
-            return indexes_views[start_index:start_index + require_num_view]
+        indexes_views = list(range(n))
+        return indexes_views[start_index:start_index + require_num_view]
 
-
-        result = []
-        for i in range(require_num_view):
-            index = (start_index + i) % n
-            result.append(indexes_views[index])
-        return result
-        
     def makeSampleIndexPerViewsInSequential(self):
 
         num_view = self.config['num_view_for_sub_scene']
         stride = self.config['stride_for_sub_scene']
-        is_scene_back_to_origin = False
-        Nsamples = len(self.camera_datasets[0].samples)
+        first_camera_dataset = next(iter(self.camera_dataset_by_id.values()))
+        Nsamples = len(first_camera_dataset.samples)
 
         if num_view >= Nsamples:
             self.sample_indexes_per_views_list.append(
-                self.get_views(self.camera_datasets[0].samples, 0, num_view, wrap=is_scene_back_to_origin)
+                self.get_views(first_camera_dataset.samples, 0, num_view)
             )
             return
 
-        last_start_exclusive = Nsamples if is_scene_back_to_origin else Nsamples - num_view + 1
+        last_start_exclusive = Nsamples - num_view + 1
+        last_start = -1
         for i in range(0, last_start_exclusive, stride):
             self.sample_indexes_per_views_list.append(
-                self.get_views(self.camera_datasets[0].samples, i, num_view, wrap=is_scene_back_to_origin)
+                self.get_views(first_camera_dataset.samples, i, num_view)
+            )
+            last_start = i
+
+        tail_start = Nsamples - num_view
+        if last_start < tail_start:
+            self.sample_indexes_per_views_list.append(
+                self.get_views(first_camera_dataset.samples, tail_start, num_view)
             )
              
    
@@ -189,7 +187,7 @@ class Testdataset(torch.utils.data.Dataset):
 
             frame = []
 
-            for camera_dataset in self.camera_datasets:
+            for camera_dataset in self.camera_dataset_by_id.values():
 
                 undistorted_image = cv2.imread(os.path.join(camera_dataset.config['datapath']['undistorted_images'], camera_dataset.samples[sample_idx]['undistorted_image_name']))
                 input_depth = cv2.imread(os.path.join(camera_dataset.config['datapath']['input_depth'], camera_dataset.samples[sample_idx]['input_depth_name']), cv2.IMREAD_UNCHANGED)

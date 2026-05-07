@@ -8,6 +8,7 @@ dense_slam_benchmark/benchmark_tools/external/__init__.py
 dense_slam_benchmark/benchmark_tools/external/depth_anything_v2/__init__.py
 dense_slam_benchmark/benchmark_tools/external/depth_anything_v3/__init__.py
 dense_slam_benchmark/benchmark_tools/external/depth_enhancement/__init__.py
+dense_slam_benchmark/benchmark_tools/external/foundation_stereo/__init__.py
 dense_slam_benchmark/benchmark_tools/external/hloc/__init__.py
 dense_slam_benchmark/benchmark_tools/external/mapanything/__init__.py
 dense_slam_benchmark/benchmark_tools/external/mast3r/__init__.py
@@ -25,7 +26,6 @@ dense_slam_benchmark/dataset_tools/__init__.py
 dense_slam_benchmark/dataset_tools/camera.py
 dense_slam_benchmark/dataset_tools/undistort.py
 dense_slam_benchmark/dataset_tools/utils.py
-dense_slam_benchmark/dataset_tools/visualization.py
 dense_slam_benchmark/dataset_tools/visualizer.py
 dense_slam_benchmark/dataset_tools/colmap_tools/colmapsparsedepth2image.py
 dense_slam_benchmark/dataset_tools/datasets/__init__.py
@@ -39,6 +39,7 @@ dense_slam_benchmark/dataset_tools/datasets/tartan_air.py
 dense_slam_benchmark/dataset_tools/scripts/__init__.py
 dense_slam_benchmark/dataset_tools/scripts/benchmark_GT_alignment.py
 dense_slam_benchmark/dataset_tools/scripts/benchmark_dataset_generator.py
+dense_slam_benchmark/dataset_tools/scripts/dataset_visualizer.py
 dense_slam_benchmark/dataset_tools/scripts/export_colmapsparsepoints.py
 dense_slam_benchmark/dataset_tools/scripts/sclerp_interpolation_align_pose_to_camera.py
 dense_slam_benchmark_tool.egg-info/PKG-INFO

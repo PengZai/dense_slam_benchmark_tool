@@ -163,14 +163,6 @@ def save_depth_histogram(
     plt.close()
 
 
-def invert_transform(T):
-    R = T[:3, :3]
-    p = T[:3, 3]
-    T_inv = np.eye(4)
-    T_inv[:3, :3] = R.T
-    T_inv[:3, 3] = -R.T @ p
-    return T_inv
-
 def isInImage(u, v, z, width, height):
     if z <= 0 or u < 0 or u > width - 1 or v < 0 or v > height - 1:
         return False

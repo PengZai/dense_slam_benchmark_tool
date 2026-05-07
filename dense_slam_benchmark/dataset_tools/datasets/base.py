@@ -667,7 +667,7 @@ class Dataset:
 
             cumulated_p_c_h = (
                 scale_transformation_matrix
-                @ utils.invert_transform(synchronized_image_data["T_w_cam_idx"])
+                @ np.linalg.inv(synchronized_image_data["T_w_cam_idx"])
                 @ cumulated_points_w_h.T
             ).T
             cumulated_p_c = cumulated_p_c_h[:, :3]

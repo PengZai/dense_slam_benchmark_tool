@@ -30,6 +30,46 @@ MODEL_CONFIGS = {
         "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
         "class_name": "HLocWrapper",
     },
+    "hloc_superpoint_sfm": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_sift_sfm": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_loma_sfm": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_loftr_sfm": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_romav2_sfm": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_superpoint_triangulation": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_sift_triangulation": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_loma_triangulation": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_loftr_triangulation": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
+    "hloc_romav2_triangulation": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.hloc",
+        "class_name": "HLocWrapper",
+    },
     "multi_view_stereo": {
         "module": "dense_slam_benchmark.benchmark_tools.external.multi_view_stereo",
         "class_name": "MVSWrapper",
@@ -49,6 +89,14 @@ MODEL_CONFIGS = {
     "vggt": {
         "module": "dense_slam_benchmark.benchmark_tools.external.vggt",
         "class_name": "VGGTWrapper",
+    },
+    "foundation_stereo": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.foundation_stereo",
+        "class_name": "FoundationStereoWrapper",
+    },
+    "moge": {
+        "module": "dense_slam_benchmark.benchmark_tools.external.moge",
+        "class_name": "MoGeWrapper",
     },
 }
 

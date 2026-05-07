@@ -5,11 +5,12 @@ Summary: Dense SLAM & Depth Estimation Benchmark Tool - Unified framework for ev
 Author-email: PengZai <649365461@qq.com>
 Requires-Python: >=3.10.0
 Description-Content-Type: text/markdown
-Requires-Dist: moderngl_window
+Requires-Dist: moderngl_window<3
 Requires-Dist: open3d
 Requires-Dist: opencv-python
 Requires-Dist: pytransform3d
 Requires-Dist: trimesh
+Requires-Dist: pyglet<2
 Requires-Dist: pycolmap
 Requires-Dist: hydra-core
 Requires-Dist: torch==2.10.0
@@ -26,6 +27,8 @@ Provides-Extra: depth-anything-v3
 Requires-Dist: depth-anything-3 @ git+https://github.com/PengZai/Depth-Anything-3.git@main#egg=depth-anything-3 ; extra == "depth-anything-v3"
 Provides-Extra: vggt
 Requires-Dist: vggt @ git+https://github.com/PengZai/vggt.git ; extra == "vggt"
+Provides-Extra: foundation-stereo
+Requires-Dist: FoundationStereo @ git+https://github.com/PengZai/FoundationStereo.git ; extra == "foundation-stereo"
 Provides-Extra: hloc
 Requires-Dist: hloc[all-examples] @ git+https://github.com/PengZai/Hierarchical-Localization.git ; extra == "hloc"
 
@@ -39,6 +42,10 @@ pip install torch-cluster -f https://data.pyg.org/whl/torch-2.2.2+cu121.html
 pip install -e ".[prior-depth-anything]"
 
 
+
+# install vggt-long
+python -m pip install -e . --dry-run --no-build-isolation
+python -m py_compile setup.py vggt_long.py
 
 # install benchmark dataset
 conda create -n benchmark-dataset python=3.11.0

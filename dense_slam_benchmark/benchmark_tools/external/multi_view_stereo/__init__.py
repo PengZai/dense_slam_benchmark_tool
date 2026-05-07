@@ -121,6 +121,7 @@ class MVSWrapper():
                 {
                     'pred_depth':depth,
                     'pred_depth_mask': (depth > 0), # this 1 threshold according to scene.show() visualization setting
+                    'pred_depth_confidence': (depth > 0).astype("float32"),
                     'pred_T_w_c': view['T_w_c'].cpu().numpy(),
                     'runtime': runtime / float(num_frame)
                 }

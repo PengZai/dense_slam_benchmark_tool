@@ -8,14 +8,23 @@ batch_size: 2
 num_view_for_sub_scene: 4 # number of view in one sample which is a sub scene
 stride_for_sub_scene: 1 # stride for sample
 
-used_camera_idx_per_view: [0]
+used_camera_idx_per_view: [0,1]
+# dataset: ETH3d
+# scene_name: ETH3d_forest_64
+# root_data_dir: ${machine.root_data_dir}
+# root_pretrained_checkpoints_dir: ${machine.root_pretrained_checkpoints_dir}
+# root_experiments_dir: ${machine.root_experiments_dir}
+# GT_geometry_dir_name: gt_depth_in_cam4_plane_c0_gt_depth_in_cam5_plane_c0
+# input_pose_name: eth3d_T_images_rig_cam4_undistorted_first_sample_from_cam3.txt
+# input_geometry_dir: gt_depth_in_cam4_plane_downsampled_40_percent_c0
+# input_geometry_dir: livox_lidar_c10
+
+
 dataset: BotanicGarden
-scene_name: BotanicGarden_1018_00_32_test_4
+scene_name: BotanicGarden_1018_00_32
 root_data_dir: ${machine.root_data_dir}
 root_pretrained_checkpoints_dir: ${machine.root_pretrained_checkpoints_dir}
 root_experiments_dir: ${machine.root_experiments_dir}
-GT_geometry_dir_name: livox_lidar_c10
-input_pose_name: Twc_in_colmap_traj.txt
+GT_geometry_dir_name: livox_lidar_c8
+input_pose_name: aligned_liosam_pose.txt
 input_geometry_dir: livox_lidar_downsampled_40_percent_c0
-# input_geometry_dir: livox_lidar_c10
-

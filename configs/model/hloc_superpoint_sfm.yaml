@@ -1,0 +1,263 @@
+# String for model factory
+model_str: "hloc_superpoint_sfm"
+# Model config
+model_config:
+  name: "hloc_superpoint_sfm"
+  # Directory used for temporary HLoc/COLMAP working files.
+  # Pick a writable location with enough disk space.
+  cache_dir: "${root_pretrained_checkpoints_dir}/hloc_cache"
+  # Keep per-sample HLoc working directories for debugging/reuse.
+  # Set false to delete each temporary working directory after inference.
+  keep_cache: true
+  # Save colored point clouds made from wrapper outputs:
+  # pred_depth + pred_depth_mask + pred_T_w_c + intrinsics + image.
+  visualize_pred_pointcloud: false
+  # Open an Open3D window for the merged predicted point cloud.
+  # Usually keep false on servers/headless runs.
+  show_pred_pointcloud: false
+  # Optional output directory. Leave null to save under each HLoc cache run:
+  #   <cache_run>/outputs/pred_pointcloud/
+  pred_pointcloud_dir: null
+  pred_pointcloud_max_points: 1000000
+
+  # Main switch for the matching pipeline.
+  # Supported sparse modules: "superpoint", "sift", "loma"
+  # Supported dense modules: "loftr", "efficient_loftr", "roma", "romav2"
+  #
+  # Sparse modules use:
+  #   extract_features -> match_features -> reconstruction
+  #
+  # Dense modules use:
+  #   match_dense -> reconstruction
+  #
+  # In the installed `benchmark-hloc` environment, LoMA is a sparse feature
+  # extractor + matcher pair, so it belongs to the sparse path rather than
+  # the dense path.
+  #
+  # Note: your installed HLoc package must actually expose the selected module/config.
+  module: "superpoint"
+
+  # Sparse-pipeline feature extractor config.
+  # Only used when module is "superpoint", "sift", or "loma".
+  # Leave null to use the wrapper default:
+  #   superpoint -> "superpoint_max"
+  #   sift       -> "sift"
+  #   loma       -> "loma_aachen"
+  #
+  # Common examples from your installed HLoc:
+  #   "superpoint_aachen"
+  #   "superpoint_max"
+  #   "superpoint_inloc"
+  #   "sift"
+  #   "loma_aachen"
+  #   "loma_inloc"
+  feature_conf: superpoint_max
+
+  # Sparse-pipeline matcher config.
+  # Only used when module is "superpoint", "sift", or "loma".
+  # Leave null to use the wrapper default:
+  #   superpoint -> "superglue"
+  #   sift       -> "NN-mutual"
+  #   loma       -> "loma"
+  #
+  # Common examples:
+  #   "superglue"
+  #   "superglue-fast"
+  #   "NN-mutual"
+  #   "NN-ratio"
+  #   "adalam"
+  #   "loma"
+  matcher_conf: superglue
+
+  # Dense matching config.
+  # Only used when module is one of the dense options:
+  #   "loftr", "efficient_loftr", "roma", "romav2"
+  #
+  # Leave null to use the wrapper default matching the module name.
+  # For example:
+  #   module: "loftr"  -> dense_matcher_conf defaults to "loftr"
+  #   module: "efficient_loftr" -> dense_matcher_conf defaults to "efficient_loftr"
+  #   module: "roma"   -> dense_matcher_conf defaults to "roma"
+  #   module: "romav2" -> dense_matcher_conf defaults to "romav2"
+  #
+  # Override this only if your HLoc install exposes a custom dense config name.
+  dense_matcher_conf: null
+
+  # How image pairs are built before matching.
+  # Supported modes:
+  #   "exhaustive" - every image is matched with every other image.
+  #     Simple and robust for short benchmark clips, but scales poorly
+  #     for long sequences.
+  #   "sequential" - each image is matched with its temporal neighbours,
+  #     controlled by `sequential_overlap` below. Cheaper for long ordered
+  #     sequences. Requires `hloc.pairs_from_sequential`.
+  pair_mode: "sequential"
+
+  # Window size used by the "sequential" pair builder. Each image is paired
+  # with the next `sequential_overlap` images in the input order.
+  # Ignored when pair_mode != "sequential".
+  sequential_overlap: 32
+
+  # If true, the benchmark intrinsics are written to COLMAP/HLoc and reused
+  # as priors during reconstruction. Usually keep this enabled for calibrated data.
+  # Set false only if you want HLoc/COLMAP to estimate intrinsics on its own.
+  #
+  # Note: the current "reconstruction with poses" path in HLoc mainly uses the
+  # provided camera poses as initialization for triangulation + bundle adjustment.
+  # The wrapper still exposes this flag for the standard incremental path.
+  use_input_intrinsics: true
+
+  # If true, write per-image position priors into the COLMAP database from the
+  # dataset's input T_w_c. The mapper uses them as a soft BA constraint.
+  # Position-only — orientation is not constrained (PosePrior carries no
+  # rotation field). Only the `pipeline: "reconstruction"` path consumes this.
+  use_input_poses_as_prior: false
+
+  # Which images get a position prior when use_input_poses_as_prior=true.
+  # Accepts:
+  #   "all"            : every image's input T_w_c is anchored. The whole
+  #                      trajectory is pulled toward the input poses.
+  #   "first_frame"    : only views at frame_idx == 0 are anchored. Acts as
+  #                      a global-gauge fix — the reconstruction stays in
+  #                      the dataset's coordinate frame, but the rest of
+  #                      the trajectory refines freely. Equivalent to N=1.
+  #   <positive int N> : views at frame_idx < N are anchored; frames >= N
+  #                      refine freely. Useful to seed a head section of
+  #                      the trajectory or to share the gauge across a few
+  #                      frames when frame 0 alone is not stable enough.
+  #                        1 -> only frame 0 (same as "first_frame")
+  #                        2 -> frames 0 and 1
+  #                        3 -> frames 0, 1, 2
+  # No-op when use_input_poses_as_prior=false.
+  pose_prior_scope: "all"
+
+  # Robust-loss residual threshold for the prior cost — the residual magnitude
+  # at which the kernel transitions from quadratic (full pull toward the
+  # prior) to flat (outliers down-weighted). NOT a weight/multiplier.
+  # ONLY consulted when `prior_use_robust_loss: true`; with robust loss off
+  # the prior cost is plain quadratic and this value has no effect.
+  # Default 7.815 = chi^2(3 DOF, 0.95) — the residual length at which a unit-
+  # covariance 3D Gaussian prior is considered an outlier 5% of the time.
+  # Tune SMALLER if input poses are noisy / contain outliers (the robust
+  # kernel kicks in earlier and rejects them); LARGER if priors are clean
+  # (more residuals stay in the quadratic region for stronger pull).
+  # Source: COLMAP PR #2660, src/colmap/controllers/incremental_mapper.h.
+  prior_position_loss_scale: 7.815
+
+  # If true, wrap the prior residual in a robust kernel (Cauchy-style) so a
+  # few bad input poses don't dominate the optimization. Without this the
+  # prior cost is plain quadratic and `prior_position_loss_scale` is unused.
+  # Recommended when input poses are noisy.
+  prior_use_robust_loss: false
+
+  # Optional standard deviation (sigma, NOT variance) of the position prior,
+  # in the same world units as your input T_w_c (meters for metric datasets).
+  # The wrapper builds a 3x3 diagonal covariance = diag(sigma**2) and writes
+  # it onto every PosePrior. Setting this whitens the residuals so
+  # `prior_position_loss_scale` (default 7.815 = chi^2(3 DOF, 0.95)) is
+  # meaningful in unit-sigma terms again.
+  # Accepts:
+  #   null              -> no covariance set; residuals treated as unit sigmas
+  #   <positive scalar> -> isotropic sigma (same uncertainty along x, y, z)
+  #   [sx, sy, sz]      -> per-axis sigmas in the WORLD frame's x / y / z
+  #
+  # Reading [sx, sy, sz]: sx=0.05 means "I trust the world-x coordinate of the
+  # input pose to ±5 cm (1 sigma)". The axes are whatever world frame your
+  # T_w_c lives in — for an EAST_NORTH_UP world that's [east, north, up], for
+  # a forward-Z camera-rig world it's [right, down, forward], etc.
+  #
+  # Smaller sigma -> tighter prior, pulls harder. Larger sigma -> looser prior.
+  # When prior_use_robust_loss=true, smaller sigma also makes the robust
+  # kernel kick in earlier (the whitened residual hits the chi^2 threshold
+  # sooner).
+  #
+  # Examples (meters):
+  #   0.02                # ±2 cm isotropic — tightly tuned VIO/SLAM poses
+  #   0.1                 # ±10 cm isotropic — moderately trusted poses
+  #   0.5                 # ±50 cm isotropic — rough/raw lidar or GPS poses
+  #   [0.03, 0.03, 0.10]  # RTK-GPS pattern: tight horizontal, looser vertical
+  #   [0.05, 0.05, 0.20]  # ±5 cm horizontal, ±20 cm vertical (typical for
+  #                       # GPS-aligned scenes where altitude is the weak axis)
+  #   [0.10, 0.10, 0.05]  # vehicle on flat ground: vertical tighter than
+  #                       # horizontal (level / ground-plane constraint)
+  #
+  # No-op when use_input_poses_as_prior=false.
+  prior_position_sigma: null
+
+  # If true and the dataset feeds 2+ views per frame (e.g. calibrated stereo),
+  # configure a COLMAP rig from frame 0's per-view poses (camera 0 = reference;
+  # other cameras' cam_from_rig = inv(T_w_cam) @ T_w_ref). HLoc then groups the
+  # left/right images of each timestep into a single Frame, so BA refines one
+  # shared 6-DoF pose per timestep instead of one per image.
+  # Automatically a no-op when frames have only one view.
+  # NOTE: use_rig=true forces camera_mode="per_folder" at runtime.
+  use_rig: false
+
+  # How COLMAP groups images into Camera records during import_images.
+  #   "single"     : one Camera shared by every image (one set of intrinsics
+  #                  for the whole sample).
+  #   "per_folder" : one Camera per camera-folder (cam00/, cam01/, ...). Images
+  #                  of the same physical camera share intrinsics; different
+  #                  cameras have their own. REQUIRED when use_rig=true.
+  #   "per_image"  : every image gets its own Camera record (no sharing).
+  #   "auto"       : let COLMAP decide from filenames / heuristics.
+  camera_mode: "auto"
+
+  # Which HLoc pipeline to run.
+  #   "reconstruction"         : full incremental SfM via hloc.reconstruction.main
+  #                              (pairs -> features/matches -> incremental mapping
+  #                              -> bundle adjustment).
+  #   "triangulate_with_poses" : skip incremental mapping; use the input poses to
+  #                              initialize cameras, then triangulate_points (+
+  #                              optional bundle_adjustment) via
+  #                              hloc.triangulate_with_poses.main.
+  # Pick "triangulate_with_poses" when the dataset already provides reasonable
+  # camera poses and you want HLoc to use them as initialization instead of
+  # rebuilding poses from scratch.
+  pipeline: "reconstruction"
+
+  # If true, COLMAP bundle adjustment will avoid refining focal length / extra
+  # intrinsic parameters. This is usually the safer choice when your intrinsics
+  # are trusted and already correspond to the cropped benchmark images.
+  # Set false if you want COLMAP to optimize camera intrinsics.
+  no_refine_intrinsics: true
+
+  # If true, skip geometric verification before reconstruction.
+  # Faster, but usually less robust. Keeping this false is recommended.
+  skip_geometric_verification: false
+
+  # Minimum number of registered images required for a valid reconstruction model.
+  # Increase this if you want to reject tiny / unstable reconstructions.
+  min_model_size: 2
+
+  # Number of CPU threads passed into COLMAP / pycolmap where supported.
+  # Increase on larger machines; reduce if you want lighter CPU usage.
+  n_threads: 16
+
+  # Only used by dense matchers (LoFTR/RoMa/etc.).
+  # Caps the number of aggregated keypoints per image after dense matching.
+  # Higher values may improve coverage but use more memory and time.
+  # `null` would mean "do not cap", but 8192 is a practical default.
+  max_kps: 8192
+
+  # If true, print more HLoc/COLMAP logs during runtime.
+  # Helpful for debugging failed reconstructions.
+  verbose: false
+
+  
+# HLoc uses the raw cropped benchmark image saved in the dataloader output
+data_norm_type: "dummy"
+pretrained: null
+torch_hub_force_reload: false
+# Sparse SfM usually benefits from a bit more image detail than the dense models
+test_resolution: [960, 600]
+postprocessing:
+  isAlignWithGT: false
+  similarity_refine_mode: "sub_scene" # "depth" uses affine depth refinement; "sub_scene" uses similarity refinement
+  isConsistencyCheck: false
+  isJustCompareNearDistance: false
+  maximum_near_distance: 10
+  sub_scene:
+    isAlignSubScenesSequential: true # whether to align sub scenes sequentially
+    gt_align_method: "depth_pixel_sim3" # GT alignment: "pointcloud_icp" (Open3D ICP vs GT_pointcloud) or "depth_pixel_sim3" (weighted Sim(3) Umeyama on per-pixel pred-vs-GT_depth correspondences)
+    similarity_refine_use_pose_init: true # use all pred/GT pose pairs to initialize sub_scene similarity alignment

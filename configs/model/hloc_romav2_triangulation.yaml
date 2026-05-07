@@ -1,0 +1,212 @@
+# ----------------------------------------------------------------------------
+# HLoc "triangulate_with_poses" pipeline.
+#
+# This config DOES NOT estimate camera intrinsics or poses. It assumes the
+# benchmark dataset provides BOTH for every image:
+#   - per-image intrinsics (used as the camera_params for COLMAP Cameras;
+#     `use_input_intrinsics` is force-True for this pipeline and not exposed)
+#   - per-image poses T_w_c (the wrapper writes them to a poses.txt file that
+#     hloc.triangulate_with_poses consumes to seed the reconstruction)
+#
+# The wrapper feeds both into COLMAP/HLoc before running:
+#   import_features -> import_matches -> triangulate_points
+#   (-> bundle_adjustment, unless skip_bundle_adjustment: true)
+#
+# Use the *_sfm.yaml siblings instead if you want HLoc to estimate cameras
+# and poses from scratch via incremental SfM.
+# ----------------------------------------------------------------------------
+# String for model factory
+model_str: "hloc_romav2_triangulation"
+# Model config
+model_config:
+  name: "hloc_romav2_triangulation"
+  # Directory used for temporary HLoc/COLMAP working files.
+  # Pick a writable location with enough disk space.
+  cache_dir: "${root_pretrained_checkpoints_dir}/hloc_cache"
+  # Keep per-sample HLoc working directories for debugging/reuse.
+  # Set false to delete each temporary working directory after inference.
+  keep_cache: true
+  # Save colored point clouds made from wrapper outputs:
+  # pred_depth + pred_depth_mask + pred_T_w_c + intrinsics + image.
+  visualize_pred_pointcloud: false
+  # Open an Open3D window for the merged predicted point cloud.
+  # Usually keep false on servers/headless runs.
+  show_pred_pointcloud: false
+  # Optional output directory. Leave null to save under each HLoc cache run:
+  #   <cache_run>/outputs/pred_pointcloud/
+  pred_pointcloud_dir: null
+  pred_pointcloud_max_points: 1000000
+
+  # Main switch for the matching pipeline.
+  # Supported sparse modules: "superpoint", "sift", "loma"
+  # Supported dense modules: "loftr", "efficient_loftr", "roma", "romav2"
+  #
+  # Sparse modules use:
+  #   extract_features -> match_features -> reconstruction
+  #
+  # Dense modules use:
+  #   match_dense -> reconstruction
+  #
+  # In the installed `benchmark-hloc` environment, LoMA is a sparse feature
+  # extractor + matcher pair, so it belongs to the sparse path rather than
+  # the dense path.
+  #
+  # Note: your installed HLoc package must actually expose the selected module/config.
+  module: "romav2"
+
+  # Sparse-pipeline feature extractor config.
+  # Only used when module is "superpoint", "sift", or "loma".
+  # Leave null to use the wrapper default:
+  #   superpoint -> "superpoint_max"
+  #   sift       -> "sift"
+  #   loma       -> "loma_aachen"
+  #
+  # Common examples from your installed HLoc:
+  #   "superpoint_aachen"
+  #   "superpoint_max"
+  #   "superpoint_inloc"
+  #   "sift"
+  #   "loma_aachen"
+  #   "loma_inloc"
+  feature_conf: null
+
+  # Sparse-pipeline matcher config.
+  # Only used when module is "superpoint", "sift", or "loma".
+  # Leave null to use the wrapper default:
+  #   superpoint -> "superglue"
+  #   sift       -> "NN-mutual"
+  #   loma       -> "loma"
+  #
+  # Common examples:
+  #   "superglue"
+  #   "superglue-fast"
+  #   "NN-mutual"
+  #   "NN-ratio"
+  #   "adalam"
+  #   "loma"
+  matcher_conf: null
+
+  # Dense matching config.
+  # Only used when module is one of the dense options:
+  #   "loftr", "efficient_loftr", "roma", "romav2"
+  #
+  # Leave null to use the wrapper default matching the module name.
+  # For example:
+  #   module: "loftr"  -> dense_matcher_conf defaults to "loftr"
+  #   module: "efficient_loftr" -> dense_matcher_conf defaults to "efficient_loftr"
+  #   module: "roma"   -> dense_matcher_conf defaults to "roma"
+  #   module: "romav2" -> dense_matcher_conf defaults to "romav2"
+  #
+  # Override this only if your HLoc install exposes a custom dense config name.
+  dense_matcher_conf: romav2
+
+  # How image pairs are built before matching.
+  # Supported modes:
+  #   "exhaustive" - every image is matched with every other image.
+  #     Simple and robust for short benchmark clips, but scales poorly
+  #     for long sequences.
+  #   "sequential" - each image is matched with its temporal neighbours,
+  #     controlled by `sequential_overlap` below. Cheaper for long ordered
+  #     sequences. Requires `hloc.pairs_from_sequential`.
+  pair_mode: "sequential"
+
+  # Window size used by the "sequential" pair builder. Each image is paired
+  # with the next `sequential_overlap` images in the input order.
+  # Ignored when pair_mode != "sequential".
+  sequential_overlap: 32
+
+  # If true and the dataset feeds 2+ views per frame (e.g. calibrated stereo),
+  # configure a COLMAP rig from frame 0's per-view poses (camera 0 = reference;
+  # other cameras' cam_from_rig = inv(T_w_cam) @ T_w_ref). HLoc then groups the
+  # left/right images of each timestep into a single Frame, so BA refines one
+  # shared 6-DoF pose per timestep instead of one per image.
+  # Automatically a no-op when frames have only one view.
+  # NOTE: use_rig=true forces camera_mode="per_folder" at runtime.
+  use_rig: false
+
+  # How COLMAP groups images into Camera records during import_images.
+  #   "single"     : one Camera shared by every image (one set of intrinsics
+  #                  for the whole sample).
+  #   "per_folder" : one Camera per camera-folder (cam00/, cam01/, ...). Images
+  #                  of the same physical camera share intrinsics; different
+  #                  cameras have their own. REQUIRED when use_rig=true.
+  #   "per_image"  : every image gets its own Camera record (no sharing).
+  #   "auto"       : let COLMAP decide from filenames / heuristics.
+  camera_mode: "auto"
+
+  # Which HLoc pipeline to run.
+  #   "reconstruction"         : full incremental SfM via hloc.reconstruction.main
+  #                              (pairs -> features/matches -> incremental mapping
+  #                              -> bundle adjustment).
+  #   "triangulate_with_poses" : skip incremental mapping; use the input poses to
+  #                              initialize cameras, then triangulate_points (+
+  #                              optional bundle_adjustment) via
+  #                              hloc.triangulate_with_poses.main.
+  # Pick "triangulate_with_poses" when the dataset already provides reasonable
+  # camera poses and you want HLoc to use them as initialization instead of
+  # rebuilding poses from scratch.
+  pipeline: "triangulate_with_poses"
+
+  # If true, run only triangulation from the input poses and skip the
+  # bundle-adjustment refinement step in HLoc's `triangulate_with_poses.py`
+  # (maps to its `--skip_bundle_adjustment` / `refine=False`).
+  # Only used when `pipeline: "triangulate_with_poses"`.
+  # Set true when the input poses are already trusted/locked and you do not
+  # want COLMAP to alter them; keep false for the standard refine-after-tri path.
+  skip_bundle_adjustment: true
+
+  # If true, COLMAP bundle adjustment will avoid refining focal length / extra
+  # intrinsic parameters. This is usually the safer choice when your intrinsics
+  # are trusted and already correspond to the cropped benchmark images.
+  # Set false if you want COLMAP to optimize camera intrinsics.
+  no_refine_intrinsics: true
+
+  # If true, skip geometric verification before reconstruction.
+  # Faster, but usually less robust. Keeping this false is recommended.
+  skip_geometric_verification: false
+
+  # Minimum number of registered images required for a valid reconstruction model.
+  # Increase this if you want to reject tiny / unstable reconstructions.
+  min_model_size: 2
+
+  # Number of CPU threads passed into COLMAP / pycolmap where supported.
+  # Increase on larger machines; reduce if you want lighter CPU usage.
+  n_threads: 16
+
+  # Only used by dense matchers (LoFTR/RoMa/etc.).
+  # Caps the number of aggregated keypoints per image after dense matching.
+  # Higher values may improve coverage but use more memory and time.
+  # `null` would mean "do not cap", but 8192 is a practical default.
+  max_kps: 8192
+
+  # If true, print more HLoc/COLMAP logs during runtime.
+  # Helpful for debugging failed reconstructions.
+  verbose: false
+
+  # Optional pycolmap IncrementalTriangulatorOptions overrides used only when
+  # `pipeline: "triangulate_with_poses"`.
+  # Leave as {} to keep HLoc/pycolmap defaults.
+  triangulation_options: {}
+
+  # Optional pycolmap BundleAdjustmentOptions overrides used only when
+  # `pipeline: "triangulate_with_poses"`.
+  # Leave as {} to keep HLoc/pycolmap defaults.
+  bundle_adjustment_options: {}
+
+
+# HLoc uses the raw cropped benchmark image saved in the dataloader output
+data_norm_type: "dummy"
+pretrained: null
+torch_hub_force_reload: false
+# Sparse SfM usually benefits from a bit more image detail than the dense models
+test_resolution: [960, 600]
+postprocessing:
+  isAlignWithGT: true
+  similarity_refine_mode: "sub_scene" # "depth" uses affine depth refinement; "sub_scene" uses similarity refinement
+  isConsistencyCheck: false
+  isJustCompareNearDistance: false
+  maximum_near_distance: 10
+  sub_scene:
+    isAlignSubScenesSequential: true # whether to align sub scenes sequentially
+    gt_align_method: "depth_pixel_sim3" # GT alignment: "pointcloud_icp" (Open3D ICP vs GT_pointcloud) or "depth_pixel_sim3" (weighted Sim(3) Umeyama on per-pixel pred-vs-GT_depth correspondences)
+    similarity_refine_use_pose_init: true # use all pred/GT pose pairs to initialize sub_scene similarity alignment

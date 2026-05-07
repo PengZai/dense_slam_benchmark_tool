@@ -53,6 +53,17 @@ class DA3Wrapper(torch.nn.Module):
             return self.model._convert_to_prediction(output)
         return self.model.output_processor(output)
 
+    @staticmethod
+    def _prediction_confidence(prediction, depth):
+        for name in ("conf", "depth_conf", "depth_confidence", "confidence"):
+            value = getattr(prediction, name, None)
+            if value is not None:
+                value = np.asarray(value)
+                if value.ndim == depth.ndim + 1 and value.shape[-1] == 1:
+                    value = value.squeeze(-1)
+                return value
+        return (np.isfinite(depth) & (depth > 0)).astype(np.float32)
+
     def forward(self, frames):
         num_frame = len(frames)
         num_views_per_frame = len(frames[0])
@@ -75,7 +86,9 @@ class DA3Wrapper(torch.nn.Module):
         start = time.time()
 
         batch_depths = []
+        batch_depth_confidences = []
         batch_poses = []
+        batch_intrinsics_pred = []
         for batch_idx in range(batch_size):
             batch_images = images[batch_idx : batch_idx + 1]
             batch_intrinsics = (
@@ -110,19 +123,30 @@ class DA3Wrapper(torch.nn.Module):
                 )
 
             batch_depths.append(prediction.depth)
+            batch_depth_confidences.append(
+                self._prediction_confidence(prediction, prediction.depth)
+            )
             if getattr(prediction, "extrinsics", None) is not None:
                 batch_poses.append(self._as_camera_to_world(prediction.extrinsics))
             else:
                 batch_poses.append(None)
+            pred_intr = getattr(prediction, "intrinsics", None)
+            if pred_intr is not None:
+                pred_intr = np.asarray(pred_intr)
+            batch_intrinsics_pred.append(pred_intr)
 
         if images.device.type == "cuda":
             torch.cuda.synchronize(images.device)
         runtime = time.time() - start
 
         depth = np.stack(batch_depths, axis=0)
+        depth_confidence = np.stack(batch_depth_confidences, axis=0)
         pred_T_w_c = None
         if all(batch_pose is not None for batch_pose in batch_poses):
             pred_T_w_c = np.stack(batch_poses, axis=0)
+        pred_intrinsics = None
+        if all(batch_intr is not None for batch_intr in batch_intrinsics_pred):
+            pred_intrinsics = np.stack(batch_intrinsics_pred, axis=0)
 
         results = []
         for frame_idx in range(num_frame):
@@ -135,11 +159,18 @@ class DA3Wrapper(torch.nn.Module):
             else:
                 frame_T_w_c = pred_T_w_c[:, pred_idx]
 
+            if pred_intrinsics is None:
+                frame_intrinsics = frames[frame_idx][0]["intrinsics"].detach().cpu().numpy()
+            else:
+                frame_intrinsics = pred_intrinsics[:, pred_idx]
+
             results.append(
                 {
                     "pred_depth": pred_depth,
                     "pred_depth_mask": pred_depth_mask,
+                    "pred_depth_confidence": depth_confidence[:, pred_idx],
                     "pred_T_w_c": frame_T_w_c,
+                    "pred_intrinsics": frame_intrinsics,
                     "runtime": runtime / float(num_frame),
                 }
             )

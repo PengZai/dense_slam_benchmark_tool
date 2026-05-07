@@ -145,7 +145,7 @@ class ETH3d(Dataset):
         T_c_w = np.eye(4, dtype=np.float32)
         T_c_w[:3, :3] = R_c_w.astype(np.float32)
         T_c_w[:3, 3] = np.array([tx, ty, tz], dtype=np.float32)
-        return utils.invert_transform(T_c_w).astype(np.float32)
+        return np.linalg.inv(T_c_w).astype(np.float32)
     
     def read_sensor3d_depth(self, sensor3d_data, sensor3d_name):
         sensor3d_path = os.path.join(sensor3d_data.config["sensor3dpath"], sensor3d_name)

@@ -1,0 +1,60 @@
+# String for model factory
+model_str: "moge"
+# Model config
+model_config:
+  name: "moge"
+
+  # MoGe release version. v2 includes a metric-scale head and outputs depth in
+  # METERS; v1 outputs relative-scale depth and needs GT alignment in
+  # postprocess. Source: thirdparty/MoGe/moge/scripts/infer.py.
+  version: "v2"
+
+  # HuggingFace repo or local path to weights. Leave null to use the version's
+  # default (v1 -> "Ruicheng/moge-vitl", v2 -> "Ruicheng/moge-2-vitl-normal").
+  pretrained_model_name_or_path: null
+
+  # MoGe inference resolution selector. An integer in [0, 9] that picks the
+  # number of ViT tokens between (min_tokens_range, max_tokens_range). Higher
+  # = finer details, slower inference. Output map size always matches the
+  # input image size; this only changes how many tokens the ViT processes.
+  resolution_level: 9
+
+  # Optional explicit ViT token count for inference (typical range 1200-2500).
+  # Overrides resolution_level when set. Leave null to derive from
+  # resolution_level.
+  num_tokens: null
+
+  # Mixed-precision (fp16) inference. Faster and lower memory; recommended on
+  # any modern CUDA GPU. Set false to force fp32.
+  use_fp16: true
+
+  # If true, feed the dataset's horizontal field of view to MoGe (computed
+  # from the input intrinsics). MoGe then estimates depth consistent with that
+  # FoV and returns intrinsics tied to it. If false, MoGe estimates FoV from
+  # the image alone — fully monocular, but the predicted intrinsics may not
+  # match the dataset's calibration. Either way, MoGe assumes a centered
+  # principal point (cx, cy = 0.5 * W, 0.5 * H).
+  use_input_fov_x: false
+
+# Image normalization handled inside the wrapper (BGR uint8 -> RGB float [0,1]),
+# so no encoder-specific normalization is applied by the dataloader.
+data_norm_type: "unchange"
+torch_hub_force_reload: false
+
+# MoGe is flexible on input size; we just pass whatever the dataloader prepares.
+# Pick something close to the input aspect ratio that fits memory.
+test_resolution: [518, 384]
+
+postprocessing:
+  # MoGe v2 produces metric depth, so the affine depth refinement is OFF by
+  # default. If you swap version: "v1" above (relative depth), flip
+  # isAlignWithGT to true and similarity_refine_mode to "depth".
+  isAlignWithGT: false
+  similarity_refine_mode: "depth" # "depth" uses affine depth refinement; "sub_scene" uses similarity refinement
+  isConsistencyCheck: false
+  isJustCompareNearDistance: false
+  maximum_near_distance: 10 # unit metter
+  sub_scene:
+    isAlignSubScenesSequential: true # whether to align sub scenes sequentially
+    gt_align_method: "pointcloud_icp" # GT alignment: "pointcloud_icp" (Open3D ICP vs GT_pointcloud) or "depth_pixel_sim3" (weighted Sim(3) Umeyama on per-pixel pred-vs-GT_depth correspondences)
+    similarity_refine_use_pose_init: true # use all pred/GT pose pairs to initialize sub_scene similarity alignment

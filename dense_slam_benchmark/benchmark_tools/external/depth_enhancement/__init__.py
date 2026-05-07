@@ -55,6 +55,7 @@ class DepthEnhancementWrapper(torch.nn.Module):
             res.append({
                 'pred_depth': output,
                 'pred_depth_mask': output > 0,
+                'pred_depth_confidence': (output > 0).astype("float32"),
                 'pred_T_w_c': view['T_w_c'].cpu().numpy(),
                 'runtime':runtime,
             })
@@ -62,5 +63,4 @@ class DepthEnhancementWrapper(torch.nn.Module):
         
 
         return res
-
 

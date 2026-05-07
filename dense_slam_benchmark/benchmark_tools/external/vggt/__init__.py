@@ -49,7 +49,9 @@ class VGGTWrapper(torch.nn.Module):
         )
 
         batch_depths = []
+        batch_depth_confidences = []
         batch_poses = []
+        batch_intrinsics = []
         for batch_idx in range(batch_size):
             batch_images = images[batch_idx : batch_idx + 1]
 
@@ -60,25 +62,37 @@ class VGGTWrapper(torch.nn.Module):
                     output = self.model(batch_images)
 
             pose_enc = output["pose_enc"].float()
-            extrinsics, _ = pose_encoding_to_extri_intri(
-                pose_enc, image_size_hw=(H, W), build_intrinsics=False
+            extrinsics, intrinsics = pose_encoding_to_extri_intri(
+                pose_enc, image_size_hw=(H, W), build_intrinsics=True
             )
             extrinsics = extrinsics.detach().cpu().numpy().squeeze(0)
+            intrinsics = intrinsics.detach().cpu().numpy().squeeze(0)
 
             depth = output["depth"].float().detach().cpu().numpy()
             depth = depth.squeeze(0).squeeze(-1)
+            if "depth_conf" in output:
+                depth_confidence = output["depth_conf"].float().detach().cpu().numpy()
+                depth_confidence = depth_confidence.squeeze(0)
+                if depth_confidence.ndim == 4 and depth_confidence.shape[-1] == 1:
+                    depth_confidence = depth_confidence.squeeze(-1)
+            else:
+                depth_confidence = (np.isfinite(depth) & (depth > 0)).astype(np.float32)
 
             T_w_c = self._world_to_camera_3x4_to_camera_to_world_4x4(extrinsics)
 
             batch_depths.append(depth)
+            batch_depth_confidences.append(depth_confidence)
             batch_poses.append(T_w_c)
+            batch_intrinsics.append(intrinsics)
 
         if images.device.type == "cuda":
             torch.cuda.synchronize(images.device)
         runtime = time.time() - start
 
         depth = np.stack(batch_depths, axis=0)
+        depth_confidence = np.stack(batch_depth_confidences, axis=0)
         pred_T_w_c = np.stack(batch_poses, axis=0)
+        pred_intrinsics = np.stack(batch_intrinsics, axis=0)
 
         results = []
         for frame_idx in range(num_frame):
@@ -90,7 +104,9 @@ class VGGTWrapper(torch.nn.Module):
                 {
                     "pred_depth": pred_depth,
                     "pred_depth_mask": pred_depth_mask,
+                    "pred_depth_confidence": depth_confidence[:, view_idx],
                     "pred_T_w_c": pred_T_w_c[:, view_idx],
+                    "pred_intrinsics": pred_intrinsics[:, view_idx],
                     "runtime": runtime / float(num_frame),
                 }
             )

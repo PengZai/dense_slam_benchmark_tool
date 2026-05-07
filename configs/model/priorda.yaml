@@ -15,7 +15,12 @@ torch_hub_force_reload: false
 # test resolution
 test_resolution: [512, 336]
 postprocessing:
-  isAffineRefineDepthWithInputDepth: false
+  isAlignWithGT: true
+  similarity_refine_mode: "depth" # "depth" uses affine depth refinement; "sub_scene" uses similarity refinement
   isConsistencyCheck: true
   isJustCompareNearDistance: false
   maximum_near_distance: 10 # unit metter
+  sub_scene:
+    isAlignSubScenesSequential: true # whether to align sub scenes sequentially
+    gt_align_method: "depth_pixel_sim3" # GT alignment: "pointcloud_icp" (Open3D ICP vs GT_pointcloud) or "depth_pixel_sim3" (weighted Sim(3) Umeyama on per-pixel pred-vs-GT_depth correspondences)
+    similarity_refine_use_pose_init: true # use all pred/GT pose pairs to initialize sub_scene similarity alignment

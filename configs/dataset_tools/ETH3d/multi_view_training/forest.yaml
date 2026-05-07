@@ -6,7 +6,7 @@ system:
   # start_idx: 25
   # end_idx: 40
   start_idx: 0
-  end_idx: 30
+  end_idx: 63
   maximum_depth_for_depthimage: 100
   minimum_depth_for_depthimage: 0.001
   maximum_z_for_pointcloud: 100 # lidar reliable distance is 100 meter maximum
@@ -16,14 +16,14 @@ system:
 
 output:
   isOutput: true
-  path: /mnt/lboro_nas/personal/Zhipeng/wai_data/ETH3d_forest_1
+  path: /mnt/lboro_nas/personal/Zhipeng/wai_data/ETH3d_forest_64
   isSaveVisualizationDepthImage: true
   maximum_depth_for_vis_depthimage: -1
   minimum_depth_for_vis_depthimage: -1
 
 
 visualization:
-  isVisualization: true
+  isVisualization: false
 
 
 # images_rig_cam7 -> CAMERA_ID 0
@@ -74,6 +74,20 @@ sensor3ds:
   sensor3d1:
     id: 1
     sensor3dtype: imagedepth
+    camera_id: 3
+    name: gt_depth_in_cam4_plane_downsampled_40_percent
+    sensor3dpath: /mnt/lboro_nas/personal/Zhipeng/eth3d/multi_view_training_rig_depth/forest_rig_depth/forest/ground_truth_depth/images_rig_cam4
+    camera_model: pinhole
+    original_resolution: [752, 480]
+    original_intrinsics: [543.476, 542.696, 410.518, 226.622] #fx, fy, cu, cv
+    distortion_model: thin_prism_fisheye
+    distortion_coeffs: [-0.0696259, -0.0619737, 0.00136507, -0.00207556, 0.097466, -0.063834, 0.00976896, -0.00190205] #k1,k2,p1,p2,k3,k4,sx1,sy1
+    xyz_scale_factor: [1.0, 1.0, 1.0]
+    down_sample_rate: 0.4
+
+  sensor3d2:
+    id: 2
+    sensor3dtype: imagedepth
     camera_id: 2
     name: gt_depth_in_cam5_plane
     sensor3dpath: /mnt/lboro_nas/personal/Zhipeng/eth3d/multi_view_training_rig_depth/forest_rig_depth/forest/ground_truth_depth/images_rig_cam5
@@ -85,16 +99,28 @@ sensor3ds:
     xyz_scale_factor: [1.0, 1.0, 1.0]
     down_sample_rate: 1.0
 
-  
+  sensor3d3:
+    id: 3
+    sensor3dtype: imagedepth
+    camera_id: 2
+    name: gt_depth_in_cam5_plane_downsampled_40_percent
+    sensor3dpath: /mnt/lboro_nas/personal/Zhipeng/eth3d/multi_view_training_rig_depth/forest_rig_depth/forest/ground_truth_depth/images_rig_cam5
+    camera_model: pinhole
+    original_resolution: [752, 480]
+    original_intrinsics: [539.39, 539.777, 353.777, 227.355] #fx, fy, cu, cv
+    distortion_model: thin_prism_fisheye
+    distortion_coeffs: [-0.0695354, -0.0487684, -0.00550784, -0.00798835, 0.0623511, -0.0362409, 0.0466469, 0.0250837] #k1,k2,p1,p2,k3,k4,sx1,sy1
+    xyz_scale_factor: [1.0, 1.0, 1.0]
+    down_sample_rate: 0.4
 
 
 data_source1:
   trajectoryname: eth3d
   trajectorytype: poses_for_all_cameras
   trajectory_path: /mnt/lboro_nas/personal/Zhipeng/eth3d/multi_view_training_rig/forest/rig_calibration/images.txt
-  used_sensor3d_idxes: [0, 1]
+  used_sensor3d_idxes: [1]
   num_cumulation: [0, 0] # if there are two used sensor3ds, you need to specify two numbers of cumulation.
-  used_camera_idxes: [0, 1]
+  used_camera_idxes: [0]
 
 
 

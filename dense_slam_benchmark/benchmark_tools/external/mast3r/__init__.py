@@ -133,12 +133,16 @@ class MASt3RSGWrapper(torch.nn.Module):
             pred_idx = frame_idx*num_views_per_frame
             pred_depth = depths[pred_idx].reshape((height, width)).unsqueeze(0).detach().cpu().numpy()
             pred_depth_mask = (confs[pred_idx] > 1).unsqueeze(0).detach().cpu().numpy()
+            pred_depth_confidence = confs[pred_idx].reshape((height, width)).unsqueeze(0).detach().cpu().numpy()
             pred_T_w_c = c2w_poses[pred_idx].unsqueeze(0).detach().cpu().numpy()
+            pred_intrinsics = intrinsics[pred_idx].unsqueeze(0).detach().cpu().numpy()
             res.append(
                 {
                     'pred_depth': pred_depth,
                     'pred_depth_mask': pred_depth_mask, # this 1 threshold according to scene.show() visualization setting
+                    'pred_depth_confidence': pred_depth_confidence,
                     'pred_T_w_c': pred_T_w_c,
+                    'pred_intrinsics': pred_intrinsics,
                     'runtime': runtime / float(num_frame) # unit second
                 }
             )
@@ -146,6 +150,5 @@ class MASt3RSGWrapper(torch.nn.Module):
         # scene.show()
 
         return res
-
 
 

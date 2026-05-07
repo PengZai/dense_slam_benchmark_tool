@@ -1,0 +1,29 @@
+# String for model factory
+model_str: "foundation_stereo"
+# Model config
+model_config:
+  name: "foundation_stereo"
+  # Full path to the checkpoint .pth; FoundationStereo expects a sibling cfg.yaml
+  # next to the .pth (e.g. pretrained_models/23-51-11/{23-51-11.pth, cfg.yaml}).
+  ckpt_dir: "${root_pretrained_checkpoints_dir}/foundation_stereo/11-33-40/11-33-40.pth"
+  valid_iters: 12
+  hiera: false       # set true for hierarchical inference on >1K images
+  small_ratio: 0.5   # only used when hiera=true
+
+# Image Normalization Type
+# wrapper consumes the raw uint8 image; no encoder-specific normalization
+data_norm_type: "unchange"
+# Torch hub force reload
+torch_hub_force_reload: false
+# test resolution
+test_resolution: [512, 320]
+postprocessing:
+  isAlignWithGT: true  
+  similarity_refine_mode: "depth" # "depth" uses affine depth refinement; "sub_scene" uses similarity refinement
+  isConsistencyCheck: true
+  isJustCompareNearDistance: false
+  maximum_near_distance: 10 # unit metter
+  sub_scene:
+    isAlignSubScenesSequential: false # whether to align sub scenes sequentially
+    gt_align_method: "pointcloud_icp" # GT alignment: "pointcloud_icp" (Open3D ICP vs GT_pointcloud) or "depth_pixel_sim3" (weighted Sim(3) Umeyama on per-pixel pred-vs-GT_depth correspondences)
+    similarity_refine_use_pose_init: true # use all pred/GT pose pairs to initialize sub_scene similarity alignment

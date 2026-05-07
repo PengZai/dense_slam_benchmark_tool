@@ -9,6 +9,10 @@ pip install -e ".[prior-depth-anything]"
 
 
 
+# install vggt-long
+python -m pip install -e . --dry-run --no-build-isolation
+python -m py_compile setup.py vggt_long.py
+
 # install benchmark dataset
 conda create -n benchmark-dataset python=3.11.0
 conda activate benchmark-dataset

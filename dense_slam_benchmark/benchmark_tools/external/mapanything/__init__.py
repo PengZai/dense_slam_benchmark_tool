@@ -50,7 +50,7 @@ class MapAnythingWrapper(torch.nn.Module):
             if self.isInputCameraPoses:
                 input_view['camera_poses'] = view['T_w_c']
             if self.isInputDepthZ:
-                input_view['depth_z'] = view['input_depth'].squeeze(1),
+                input_view['depth_z'] = view['input_depth'].squeeze(1)
 
 
             input_views.append(input_view)
@@ -84,17 +84,40 @@ class MapAnythingWrapper(torch.nn.Module):
             depth_z = outputs[pred_idx]['depth_z'].squeeze(-1).detach().cpu().numpy()
             mask = outputs[pred_idx]['mask'].squeeze(-1).detach().cpu().numpy()
             valid_mask = depth_z > 0.0
+            depth_confidence = None
+            for confidence_key in ("conf", "depth_conf", "depth_confidence", "confidence"):
+                if confidence_key in outputs[pred_idx]:
+                    depth_confidence = (
+                        outputs[pred_idx][confidence_key]
+                        .squeeze(-1)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                    )
+                    break
+            if depth_confidence is None:
+                depth_confidence = (mask & valid_mask).astype("float32")
         
             pred_T_w_c = torch.eye(4, device=outputs[pred_idx]["cam_quats"].device).unsqueeze(0)
             pred_T_w_c_rot = quaternion_to_rotation_matrix(outputs[pred_idx]["cam_quats"].clone())
             pred_T_w_c[..., :3, :3] = pred_T_w_c_rot
             pred_T_w_c[..., :3, 3] = outputs[pred_idx]["cam_trans"].clone()
             pred_T_w_c = pred_T_w_c.cpu().numpy()
+
+            pred_intrinsics = None
+            for k_key in ("intrinsics", "K", "camera_intrinsics"):
+                if k_key in outputs[pred_idx]:
+                    pred_intrinsics = outputs[pred_idx][k_key].detach().cpu().numpy()
+                    break
+            if pred_intrinsics is None:
+                pred_intrinsics = views[pred_idx]['intrinsics'].cpu().numpy()
             res.append(
                 {
                     'pred_depth':depth_z,
                     'pred_depth_mask': mask & valid_mask,  # this 1 threshold according to scene.show() visualization setting
+                    'pred_depth_confidence': depth_confidence,
                     'pred_T_w_c': pred_T_w_c,
+                    'pred_intrinsics': pred_intrinsics,
                     'runtime': runtime/float(num_frame)
                 }
             )
